@@ -135,7 +135,8 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
         .style("font", "11px monaco")
         .attr("transform", `translate(0, ${height})`)
         // TODO: Explain the following line of code in a comment
-        .call(d3.axisBottom(xScale_scatter));
+        .call(d3.axisBottom(xScale_scatter)
+    );
 
     // TODO: Append the scaled y-axis tick marks to the svg
     svg_scatter
@@ -147,6 +148,7 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
     var color = d3.scaleOrdinal()
         .domain(["Setosa", "Versicolor", "Virginica" ])
         .range([ "#440154ff", "#21908dff", "#fde725ff"])
+
 
     // TODO: Draw scatter plot dots here. Finish the rest of this
     let dots = svg_scatter
@@ -163,12 +165,73 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
         .attr("stroke", "white")
         .attr("stroke-width", 2)
         //TODO: color points by iris variety using a categorical color map
-        .style("fill", (d) => color(d["variety"]));
+        .style("fill", (d) => color(d["variety"]))
+        // .on("mouseover", mouseover)
 
-    //TODO: add tooltip here
+    // // //TODO: add tooltip here 
+    var tooltip = d3.select("#my_scatterplot")  // Select scatterplot container
+        .append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0)
+        .style("position", "absolute")
+        .style("padding", "10px")
+        .style("left", "100px")  // Fixed position from left
+        .style("top", "400px");  // Fixed position from top
+
+    // Modify mouseover to not change position
     dots.on("mouseover", (event, d) => {
-        console.log("Moused over a dot. \nEvent:", event, "D:", d);
+        let xAttribute = d3.select("#xAxisDropdown").property("value");
+        let yAttribute = d3.select("#yAxisDropdown").property("value");
+        
+        tooltip.style("opacity", 1)
+            .html(`${xAttribute}: ${d[xAttribute]}<br/>
+                ${yAttribute}: ${d[yAttribute]}<br/>
+                variety: ${d.variety}`);
+    })
+    .on("mouseout", (event, d) => {
+        tooltip.style("opacity", 0);
     });
+
+
+
+    // Handmade legend
+    let legend = d3.select("#scatterplot_legend")
+        .append("svg")
+        .attr("width", 500)  // Increased width to accommodate horizontal layout
+        .attr("height", 50)  // Reduced height since we only need one row
+        .append("g")
+        .attr("transform", "translate(10,10)");
+
+    // Add colored circles for each variety
+    legend.selectAll("dots")
+        .data(["Setosa", "Versicolor", "Virginica"])
+        .enter()
+        .append("circle")
+        .attr("cx", (d,i) => 130 * i + 20)  // Space circles horizontally
+        .attr("cy", 30)  // Keep y position constant
+        .attr("r", 5)
+        .style("fill", d => color(d));
+
+    // Add text labels
+    legend.selectAll("labels")
+        .data(["Setosa", "Versicolor", "Virginica"])
+        .enter()
+        .append("text")
+        .attr("x", (d,i) => 130 * i + 30)  // Position text to the right of circles
+        .attr("y", 30)  // Keep y position constant
+        .style("fill", "black")
+        .text(d => d)
+        .attr("text-anchor", "left")
+        .style("alignment-baseline", "middle");
+
+    legend
+        .append("text")
+        .attr("class", "legend-title")
+        .attr("x", 130)
+        .attr("y", 5)
+        .style("text-decoration", "underline")
+        .text("Iris Varieties")
+
 
     // TODO: X axis label
     svg_scatter
@@ -208,29 +271,38 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
     ***********************************************************************/
 
     // Create an array that will hold all computed average values
-    let average_data = [];
-    // Compute all average values for each attribute, except 'variety'
-    average_data.push({
-        "sepal.length": d3.mean(data, (d) => d["sepal.length"]),
-    });
-    // TODO (optional): Add the remaining values to your array
-    average_data.push({
-        "sepal.width": d3.mean(data, (d) => d["sepal.width"]),
-    });
-    average_data.push({
-        "petal.length": d3.mean(data, (d) => d["petal.length"]),
-    });
-    average_data.push({
-        "petal.width": d3.mean(data, (d) => d["petal.width"]),
-    });
+    // let average_data = [];
+    // // Compute all average values for each attribute, except 'variety'
+    // average_data.push({
+    //     "sepal.length": d3.mean(data, (d) => d["sepal.length"]),
+    // });
+    // // TODO (optional): Add the remaining values to your array
+    // average_data.push({
+    //     "sepal.width": d3.mean(data, (d) => d["sepal.width"]),
+    // });
+    // average_data.push({
+    //     "petal.length": d3.mean(data, (d) => d["petal.length"]),
+    // });
+    // average_data.push({
+    //     "petal.width": d3.mean(data, (d) => d["petal.width"]),
+    // });
 
     // Compute the maximum and minimum values from the average values to use for later
-    let max_average = Object.values(average_data[0])[0];
-    let min_average = Object.values(average_data[0])[0];
-    average_data.forEach((element) => {
-        max_average = Math.max(max_average, Object.values(element)[0]);
-        min_average = Math.min(min_average, Object.values(element)[0]);
-    });
+    // let max_average = d3.max(Object.values(average_data)); // Find max avg
+    // let min_average = d3.min(Object.values(average_data));
+    // average_data.forEach((element) => {
+    //     max_average = Math.max(max_average, Object.values(element)[0]);
+    //     min_average = Math.min(min_average, Object.values(element)[0]);
+    // });
+
+    // Compute aggregated values for each attribute
+    let aggregated_data = [
+        { attribute: "sepal.length", avg: d3.mean(data, d => d["sepal.length"]), min: d3.min(data, d => d["sepal.length"]), max: d3.max(data, d => d["sepal.length"]) },
+        { attribute: "sepal.width", avg: d3.mean(data, d => d["sepal.width"]), min: d3.min(data, d => d["sepal.width"]), max: d3.max(data, d => d["sepal.width"]) },
+        { attribute: "petal.length", avg: d3.mean(data, d => d["petal.length"]), min: d3.min(data, d => d["petal.length"]), max: d3.max(data, d => d["petal.length"]) },
+        { attribute: "petal.width", avg: d3.mean(data, d => d["petal.width"]), min: d3.min(data, d => d["petal.width"]), max: d3.max(data, d => d["petal.width"]) }
+    ];
+
 
     // TODO: Create a scale for the x-axis that maps the x axis domain to the range of the canvas width
     // Hint: the domain for X should be the attributes of the dataset
@@ -243,7 +315,7 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
         .range([0, width])
         .padding(0.4);
 
-    // TODO: Finish this
+    // // TODO: Finish this
     svg_bar
         .append("g")
         .attr("class", "xAxis")
@@ -251,16 +323,40 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
         .call(d3.axisBottom(xScale_bar));
     // ....
 
-    // TODO: Create a scale for the y-axis that maps the y axis domain to the range of the canvas height
+    // // TODO: Create a scale for the y-axis that maps the y axis domain to the range of the canvas height
     let yScale_bar = d3
         .scaleLinear()
         // TODO: Fix this!
-        .domain([0, max_average])
+        .domain([0, d3.max(aggregated_data, (d) => d3.max([d.avg, d.min, d.max]))])
         .range([height, 0]);
 
     // TODO: Finish this
     svg_bar.append("g").attr("class", "yAxis").call(d3.axisLeft(yScale_bar));
     // ....
+
+    const buttons = d3.selectAll("input")
+    buttons.on("change", function() {
+        let selectedButton = d3.select(this).property("value");
+        // Update yScale_bar domain based on selectedButton
+        yScale_bar.domain([0, d3.max(aggregated_data, (d) => d[selectedButton])]);
+
+        // Update yAxis
+        svg_bar.select(".yAxis")
+            .transition()
+            .duration(1000)
+            .call(d3.axisLeft(yScale_bar));
+
+        svg_bar.select(".barTitle")
+            .transition()
+            .duration(1000)
+            .text(selectedButton + " Values Per Attribute");
+
+        svg_bar.select(".y-axis-bar-label")
+            .transition()
+            .duration(1000)
+            .text(selectedButton);
+        
+    });
 
     // TODO: You can create a variable that will serve as a map function for your sequential color map
     // Hint: Look at d3.scaleLinear()
@@ -296,19 +392,27 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
         .attr("text-anchor", "middle")
         .attr("x", width / 2)
         .attr("y", height + 36)  // Position below x-axis
-        .style("font-size", "14px")
         .text("Attribute"); 
     // TODO: Append y-axis label
     svg_bar.append("text")
         .attr("class", "y-axis-bar-label")
         .attr("text-anchor", "middle")
         .attr("transform", "rotate(-90)")
-        // .attr("transform", `translate(-40, ${height / 2}) rotate(-90)`) 
         .attr("x", -height/7)
         .attr("y", -40)  // Position below x-axis
-        .style("font-size", "14px")
-        .text("Average"); 
+        .text(d3.selectAll("input").property("value")); 
+    
+
     // TODO: Append bar chart title
+    svg_bar
+        .append("text")
+        .attr("class", "barTitle")
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .style("text-decoration", "underline")
+        .attr("x", width/2)
+        .attr("y", -10)
+        .text(d3.selectAll("input").property("value") + " Values Per Attribute");
     // TODO: Draw gridlines for both charts
 
     // Fix these (and maybe you need more...)
