@@ -1,3 +1,5 @@
+/////////////////////////////
+
 // Color maps you can use: https://colorbrewer2.org/
 
 // Set the dimensions and margins of the graph. You don't need to change this.
@@ -56,16 +58,20 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
     let xScale_scatter = d3
         .scaleLinear()
         //TODO: make this depend on the dropdown option
-        .domain(d3.extent(data, (d) => d[d3.select("#xAxisDropdown").property("value")]))
+        .domain([d3.min(data, (d) => d[d3.select("#xAxisDropdown").property("value")]) - 0.1,
+                d3.max(data, (d) => d[d3.select("#xAxisDropdown").property("value")]) + 0.1])
         .range([0, width]);
 
     // dynamically update x-scale domain
     d3.select("#xAxisDropdown").on("change", function() {
         let selectedOption = d3.select(this).property("value");
-        
+
         // Update scale domain
-        xScale_scatter.domain(d3.extent(data, d => d[selectedOption]));
-        
+        xScale_scatter.domain([
+            d3.min(data, d => d[selectedOption]) - 0.5,
+            d3.max(data, d => d[selectedOption]) + 0.5
+        ]);
+         
         // Update axis
         svg_scatter.select(".xAxis")
             .transition()
@@ -95,7 +101,8 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
     let yScale_scatter = d3
         .scaleLinear()
         // TODO: Fill these out
-        .domain(d3.extent(data, (d) => d[d3.select("#yAxisDropdown").property("value")]))
+        .domain([d3.min(data, (d) => d[d3.select("#yAxisDropdown").property("value")]) - 0.1,
+                d3.max(data, (d) => d[d3.select("#yAxisDropdown").property("value")]) + 0.1])
         .range([height, 0]);
 
     // dynamically update y-scale domain
@@ -103,8 +110,11 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
         let selectedOption = d3.select(this).property("value");
             
         // Update scale domain
-        yScale_scatter.domain(d3.extent(data, d => d[selectedOption]));
-            
+        yScale_scatter.domain([
+            d3.min(data, d => d[selectedOption]) - 0.5,
+            d3.max(data, d => d[selectedOption]) + 0.5
+        ]);    
+    
         // Update axis
         svg_scatter.select(".yAxis")
             .transition()
@@ -148,6 +158,25 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
     var color = d3.scaleOrdinal()
         .domain(["Setosa", "Versicolor", "Virginica" ])
         .range([ "#440154ff", "#21908dff", "#fde725ff"])
+    
+    svg_scatter.append("g")
+        .attr("class", "grid")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(xScale_scatter)
+        .tickSize(-height)
+        .tickFormat(""))
+        .selectAll(".tick line")
+        .attr("stroke", "#ccc")
+        .attr("stroke-width", 0.5);
+
+    svg_scatter.append("g")
+        .attr("class", "grid")
+        .call(d3.axisLeft(yScale_scatter)
+        .tickSize(-width)
+        .tickFormat(""))
+        .selectAll(".tick line")
+        .attr("stroke", "#ccc")
+        .attr("stroke-width", 0.5);
 
 
     // TODO: Draw scatter plot dots here. Finish the rest of this
@@ -191,8 +220,6 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
     .on("mouseout", (event, d) => {
         tooltip.style("opacity", 0);
     });
-
-
 
     // Handmade legend
     let legend = d3.select("#scatterplot_legend")
@@ -263,6 +290,7 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
         .attr("y", -10)
         .text(d3.select("#xAxisDropdown").property("value") + " vs " + d3.select("#yAxisDropdown").property("value"));
 
+
     /********************************************************************** 
      TODO: Complete the bar chart tasks
 
@@ -270,159 +298,141 @@ d3.csv("/iris.csv", d3.autoType).then(function (data) {
      attribute. However, feel free to implement this any way you'd like.
     ***********************************************************************/
 
-    // Create an array that will hold all computed average values
-    // let average_data = [];
-    // // Compute all average values for each attribute, except 'variety'
-    // average_data.push({
-    //     "sepal.length": d3.mean(data, (d) => d["sepal.length"]),
-    // });
-    // // TODO (optional): Add the remaining values to your array
-    // average_data.push({
-    //     "sepal.width": d3.mean(data, (d) => d["sepal.width"]),
-    // });
-    // average_data.push({
-    //     "petal.length": d3.mean(data, (d) => d["petal.length"]),
-    // });
-    // average_data.push({
-    //     "petal.width": d3.mean(data, (d) => d["petal.width"]),
-    // });
+    const my_attributes = ["sepal.length", "sepal.width", "petal.length", "petal.width"];
+    const aggregated_data = my_attributes.map(my_attributes => ({
+        attribute: my_attributes,
+        AVG: d3.mean(data, d => d[my_attributes]),
+        MIN: d3.min(data, d => d[my_attributes]),
+        MAX: d3.max(data, d => d[my_attributes]),
+    }));
 
-    // Compute the maximum and minimum values from the average values to use for later
-    // let max_average = d3.max(Object.values(average_data)); // Find max avg
-    // let min_average = d3.min(Object.values(average_data));
-    // average_data.forEach((element) => {
-    //     max_average = Math.max(max_average, Object.values(element)[0]);
-    //     min_average = Math.min(min_average, Object.values(element)[0]);
-    // });
+    const xScale_bar = d3.scaleBand().domain(my_attributes).range([0, width]).padding(0.2);
+    const yScale_bar = d3.scaleLinear().range([height, 0]);
+    const bar_color = d3.scaleLinear().domain([0, 5]).range(["#fde725ff", "#440154ff"]);
 
-    // Compute aggregated values for each attribute
-    let aggregated_data = [
-        { attribute: "sepal.length", avg: d3.mean(data, d => d["sepal.length"]), min: d3.min(data, d => d["sepal.length"]), max: d3.max(data, d => d["sepal.length"]) },
-        { attribute: "sepal.width", avg: d3.mean(data, d => d["sepal.width"]), min: d3.min(data, d => d["sepal.width"]), max: d3.max(data, d => d["sepal.width"]) },
-        { attribute: "petal.length", avg: d3.mean(data, d => d["petal.length"]), min: d3.min(data, d => d["petal.length"]), max: d3.max(data, d => d["petal.length"]) },
-        { attribute: "petal.width", avg: d3.mean(data, d => d["petal.width"]), min: d3.min(data, d => d["petal.width"]), max: d3.max(data, d => d["petal.width"]) }
-    ];
+    svg_bar.append("g").attr("transform", `translate(0, ${height})`).call(d3.axisBottom(xScale_bar));
+    svg_bar.append("g").attr("class", "yAxis");
+
+    svg_bar.append("text").attr("class", "barTitle").attr("x", width / 2).attr("y", -10).style("text-anchor", "middle");
+    svg_bar.append("text").attr("class", "y-axis-bar-label").attr("transform", "rotate(-90)").attr("x", -height / 2).attr("y", -40).style("text-anchor", "middle");
 
 
-    // TODO: Create a scale for the x-axis that maps the x axis domain to the range of the canvas width
-    // Hint: the domain for X should be the attributes of the dataset
-    // xDomain = ['sepal.length', ...]
-    // then you can use 'xDomain' as input to .domain()
-    let xDomain = ["sepal.length", "sepal.width", "petal.length", "petal.width"];
-    let xScale_bar = d3
-        .scaleBand()
-        .domain(xDomain)
-        .range([0, width])
-        .padding(0.4);
+    svg_bar.append("g")
+        .attr("class", "grid")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(xScale_bar)
+        .tickSize(-height)
+        .tickFormat(""))
+        .selectAll(".tick line")
+        .attr("stroke", "#ccc")
+        .attr("stroke-width", 0.5);
 
-    // // TODO: Finish this
-    svg_bar
-        .append("g")
-        .attr("class", "xAxis")
-        .attr("transform", "translate(0," + height + ")")
-        .call(d3.axisBottom(xScale_bar));
-    // ....
+    svg_bar.append("g")
+        .attr("class", "grid")
+        .call(d3.axisLeft(yScale_bar)
+        .tickSize(-width)
+        .tickFormat(""))
+        .selectAll(".tick line")
+        .attr("stroke", "#ccc")
+        .attr("stroke-width", 0.5);
+    
+    function updateBar(metric) {
+        yScale_bar.domain([0, d3.max(aggregated_data, d => d[metric]) * 1.1]);
 
-    // // TODO: Create a scale for the y-axis that maps the y axis domain to the range of the canvas height
-    let yScale_bar = d3
-        .scaleLinear()
-        // TODO: Fix this!
-        .domain([0, d3.max(aggregated_data, (d) => d3.max([d.avg, d.min, d.max]))])
-        .range([height, 0]);
-
-    // TODO: Finish this
-    svg_bar.append("g").attr("class", "yAxis").call(d3.axisLeft(yScale_bar));
-    // ....
-
-    const buttons = d3.selectAll("input")
-    buttons.on("change", function() {
-        let selectedButton = d3.select(this).property("value");
-        // Update yScale_bar domain based on selectedButton
-        yScale_bar.domain([0, d3.max(aggregated_data, (d) => d[selectedButton])]);
-
-        // Update yAxis
         svg_bar.select(".yAxis")
             .transition()
             .duration(1000)
             .call(d3.axisLeft(yScale_bar));
 
-        svg_bar.select(".barTitle")
-            .transition()
-            .duration(1000)
-            .text(selectedButton + " Values Per Attribute");
+        svg_bar.select(".barTitle").text(`${metric} Values Per Attribute`).style("text-decoration", "underline");
+        svg_bar.select(".y-axis-bar-label").text(metric);
 
-        svg_bar.select(".y-axis-bar-label")
+        const bars = svg_bar.selectAll(".bar").data(aggregated_data);
+
+        bars.join("rect")
+            .attr("class", "bar")
             .transition()
             .duration(1000)
-            .text(selectedButton);
-        
+            .attr("x", d => xScale_bar(d.attribute))
+            .attr("y", d => yScale_bar(d[metric]))
+            .attr("width", xScale_bar.bandwidth())
+            .attr("height", d => height - yScale_bar(d[metric]))
+            .attr("fill", d => bar_color(d[metric]));
+
+        const labels = svg_bar.selectAll(".bar-label")
+            .data(aggregated_data);
+    
+        labels.join("text")
+            .attr("class", "bar-label")
+            .transition()
+            .duration(1000)
+            .attr("x", d => xScale_bar(d.attribute) + xScale_bar.bandwidth() / 2)
+            .attr("y", d => yScale_bar(d[metric]) - 5) // Position 5 pixels above the bar
+            .attr("text-anchor", "middle")
+            .style("font-size", "12px")
+            .text(d => d[metric].toFixed(2));
+    }
+
+    d3.selectAll("input[name='metric']").on("change", function () {
+        const metric = d3.select(this).property("value");
+        updateBar(metric);
     });
 
-    // TODO: You can create a variable that will serve as a map function for your sequential color map
-    // Hint: Look at d3.scaleLinear()
-    // let bar_color = d3.scaleLinear()...
-    // Hint: What would the domain and range be?
-    let bar_color = d3.scaleLinear();
-    // .domain()
-    // .range()
+    updateBar("AVG");
 
-    // TODO: Append bars to the bar chart with the appropriately scaled height
-    // Hint: the data being used for the bar chart is the computed average values! Not the entire dataset
-    // TODO: Color the bars using the sequential color map
-    // Hint: .attr("fill") should fill the bars using a function, and that function can be from the above bar_color function we created
-    svg_bar
-        .selectAll(".bar")
-        // TODO: Fix these
-        .data([
-            {x: 100, y: 100},
-            {x: 150, y: 200},
-            {x: 200, y: 180},
-        ])
-        .join("rect")
-        .attr("x", (d) => d.x)
-        .attr("y", (d) => d.y)
-        .attr("width", 40)
-        .attr("height", 80)
-        .attr("fill", d3.schemeCategory10[0]);
+    // Create color legend for bar chart
+    let barLegend = d3.select("#barchart_legend")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)  // Match the width of your bar chart
+        .attr("height", 50)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + ",10)");
 
-    // TODO: Append x-axis label
-    // svg_bar.append("text"); // TODO: Fix this
-    svg_bar.append("text")
-        .attr("class", "x-axis-bar-label")
-        .attr("text-anchor", "middle")
-        .attr("x", width / 2)
-        .attr("y", height + 36)  // Position below x-axis
-        .text("Attribute"); 
-    // TODO: Append y-axis label
-    svg_bar.append("text")
-        .attr("class", "y-axis-bar-label")
-        .attr("text-anchor", "middle")
-        .attr("transform", "rotate(-90)")
-        .attr("x", -height/7)
-        .attr("y", -40)  // Position below x-axis
-        .text(d3.selectAll("input").property("value")); 
-    
+    // Create gradient definition
+    let legendDefs = barLegend.append("defs");
+    let legendGradient = legendDefs.append("linearGradient")
+        .attr("id", "bar-legend-gradient")
+        .attr("x1", "0%")
+        .attr("y1", "0%")
+        .attr("x2", "100%")
+        .attr("y2", "0%");
 
-    // TODO: Append bar chart title
-    svg_bar
-        .append("text")
-        .attr("class", "barTitle")
-        .attr("text-anchor", "middle")
-        .style("font-size", "16px")
-        .style("text-decoration", "underline")
+    // Add the color stops to the gradient
+    legendGradient.append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", "#fde725ff");
+
+    legendGradient.append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", "#440154ff");
+
+    // Add the colored rectangle
+    barLegend.append("rect")
+        .attr("x", 0)
+        .attr("y", 20)
+        .attr("width", width) 
+        .attr("height", 15)
+        .style("fill", "url(#bar-legend-gradient)");
+
+    // Add scale for the axis
+    let legendScale = d3.scaleLinear()
+        .domain([0, d3.max(aggregated_data, d => d[d3.select("input[name='metric']:checked").property("value")])])  // Dynamic domain based on selected metric
+        .range([0, width]);
+
+    // Add the axis
+    let legendAxis = d3.axisBottom(legendScale)
+        .ticks(5);
+
+    barLegend.append("g")
+        .attr("transform", "translate(0,35)")
+        .call(legendAxis);
+
+    // Add title
+    barLegend.append("text")
         .attr("x", width/2)
-        .attr("y", -10)
-        .text(d3.selectAll("input").property("value") + " Values Per Attribute");
-    // TODO: Draw gridlines for both charts
+        .attr("y", 10)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text("Range of Values");
 
-    // Fix these (and maybe you need more...)
-    // d3.selectAll("g.yAxis g.tick")
-    // .append("line")
-    // .attr("class", "gridline")
-    // .attr("x1", ...)
-    // .attr("y1", ...)
-    // .attr("x2", ...)
-    // .attr("y2", ...)
-    // .attr("stroke", ...)
-    // .attr("stroke-dasharray","2")
 });
